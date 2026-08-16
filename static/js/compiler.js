@@ -1,0 +1,2381 @@
+// ============================================================
+// CodeCompare - Compiler JavaScript
+// ============================================================
+
+
+// ============================================================
+// Starter Code Templates
+// ============================================================
+
+const templates = {
+  python: `print("Hello World")`,
+
+  java: `public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello World");
+    }
+}`,
+
+  cpp: `#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "Hello World";
+    return 0;
+}`,
+
+  c: `#include <stdio.h>
+
+int main() {
+    printf("Hello World");
+    return 0;
+}`,
+
+  javascript: `console.log("Hello World");`,
+};
+
+
+// ============================================================
+// Monaco Configuration
+// ============================================================
+
+require.config({
+  paths: {
+    vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs",
+  },
+});
+
+
+// ============================================================
+// Global Editors
+// ============================================================
+
+let editor = null;
+let editorA = null;
+let editorB = null;
+
+
+// ============================================================
+// Saved Code Information
+// ============================================================
+
+let savedCode = null;
+
+try {
+  if (window.savedCode) {
+    savedCode = window.savedCode;
+  }
+} catch (error) {
+  console.error("Could not read saved code:", error);
+}
+
+
+// ============================================================
+// DOM Elements
+// ============================================================
+
+const runModeBtn = document.getElementById("runModeBtn");
+const compareModeBtn = document.getElementById("compareModeBtn");
+
+const singleEditorSection =
+  document.getElementById("singleEditorSection");
+
+const compareEditorSection =
+  document.getElementById("compareEditorSection");
+
+const normalLanguageSection =
+  document.getElementById("normalLanguageSection");
+
+const runBtn = document.getElementById("runBtn");
+const compareBtn = document.getElementById("compareBtn");
+
+const comparisonResult =
+  document.getElementById("comparisonResult");
+
+const saveCodeBtn =
+  document.getElementById("saveCodeBtn");
+
+
+// ============================================================
+// SAVED FILE NAME DISPLAY
+// ============================================================
+
+function showSavedFileName() {
+  const savedFileInfo =
+    document.getElementById("savedFileInfo");
+
+  const savedFileName =
+    document.getElementById("savedFileName");
+
+  if (
+    savedCode &&
+    savedCode.id &&
+    savedCode.title
+  ) {
+    if (savedFileInfo) {
+      savedFileInfo.style.display = "block";
+    }
+
+    if (savedFileName) {
+      savedFileName.textContent = savedCode.title;
+    }
+  } else {
+    if (savedFileInfo) {
+      savedFileInfo.style.display = "none";
+    }
+  }
+}
+
+
+// ============================================================
+// CSRF TOKEN
+// ============================================================
+
+function getCookie(name) {
+  let cookieValue = null;
+
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
+
+    for (let cookie of cookies) {
+      cookie = cookie.trim();
+
+      if (cookie.startsWith(name + "=")) {
+        cookieValue = decodeURIComponent(
+          cookie.substring(name.length + 1)
+        );
+
+        break;
+      }
+    }
+  }
+
+  return cookieValue;
+}
+
+
+function getCSRFToken() {
+  const cookieToken = getCookie("csrftoken");
+
+  if (cookieToken) {
+    return cookieToken;
+  }
+
+  const csrfInput =
+    document.querySelector(
+      "[name=csrfmiddlewaretoken]"
+    );
+
+  if (csrfInput) {
+    return csrfInput.value;
+  }
+
+  return "";
+}
+
+
+// ============================================================
+// Change Monaco Language
+// ============================================================
+
+function changeEditorLanguage(
+  editorInstance,
+  language
+) {
+  if (!editorInstance) {
+    return;
+  }
+
+  const model = editorInstance.getModel();
+
+  if (!model) {
+    return;
+  }
+
+  monaco.editor.setModelLanguage(
+    model,
+    language
+  );
+}
+
+
+// ============================================================
+// Update Editor
+// ============================================================
+
+function updateEditor(
+  editorInstance,
+  language
+) {
+  if (!editorInstance) {
+    return;
+  }
+
+  changeEditorLanguage(
+    editorInstance,
+    language
+  );
+
+  editorInstance.setValue(
+    templates[language] || ""
+  );
+}
+
+
+// ============================================================
+// SHOW SINGLE MODE
+// ============================================================
+
+function showSingleMode() {
+  if (singleEditorSection) {
+    singleEditorSection.style.display = "block";
+  }
+
+  if (compareEditorSection) {
+    compareEditorSection.style.display = "none";
+  }
+
+  if (normalLanguageSection) {
+    normalLanguageSection.style.display = "block";
+  }
+
+  if (runBtn) {
+    runBtn.style.display = "inline-block";
+  }
+
+  if (compareBtn) {
+    compareBtn.style.display = "none";
+  }
+
+  if (comparisonResult) {
+    comparisonResult.style.display = "none";
+  }
+
+  if (runModeBtn) {
+    runModeBtn.classList.add("btn-primary");
+    runModeBtn.classList.remove(
+      "btn-outline-primary"
+    );
+  }
+
+  if (compareModeBtn) {
+    compareModeBtn.classList.remove(
+      "btn-primary"
+    );
+
+    compareModeBtn.classList.add(
+      "btn-outline-primary"
+    );
+  }
+
+  setTimeout(function () {
+    if (editor) {
+      editor.layout();
+    }
+  }, 200);
+}
+
+
+// ============================================================
+// SHOW COMPARE MODE
+// ============================================================
+
+function showCompareMode() {
+  if (singleEditorSection) {
+    singleEditorSection.style.display = "none";
+  }
+
+  if (compareEditorSection) {
+    compareEditorSection.style.display = "block";
+  }
+
+  // Hide normal language dropdown in compare mode
+  if (normalLanguageSection) {
+    normalLanguageSection.style.display = "none";
+  }
+
+  if (runBtn) {
+    runBtn.style.display = "none";
+  }
+
+  if (compareBtn) {
+    compareBtn.style.display = "inline-block";
+  }
+
+  if (runModeBtn) {
+    runModeBtn.classList.remove(
+      "btn-primary"
+    );
+
+    runModeBtn.classList.add(
+      "btn-outline-primary"
+    );
+  }
+
+  if (compareModeBtn) {
+    compareModeBtn.classList.remove(
+      "btn-outline-primary"
+    );
+
+    compareModeBtn.classList.add(
+      "btn-primary"
+    );
+  }
+
+  setTimeout(function () {
+    if (editorA) {
+      editorA.layout();
+    }
+
+    if (editorB) {
+      editorB.layout();
+    }
+  }, 200);
+}
+
+
+// ============================================================
+// LOAD SAVED SINGLE CODE
+// ============================================================
+
+function loadSavedSingleCode() {
+  if (
+    !savedCode ||
+    !savedCode.id ||
+    savedCode.type !== "single"
+  ) {
+    return;
+  }
+
+  console.log(
+    "Loading saved single code:",
+    savedCode
+  );
+
+  showSingleMode();
+
+  const languageSelect =
+    document.getElementById("language");
+
+  const language =
+    savedCode.language || "python";
+
+  // Set language dropdown
+  if (languageSelect) {
+    languageSelect.value = language;
+  }
+
+  // Set Monaco language
+  changeEditorLanguage(
+    editor,
+    language
+  );
+
+  // Set saved code
+  if (editor) {
+    editor.setValue(
+      savedCode.code || ""
+    );
+  }
+
+  console.log(
+    "Saved single code loaded successfully."
+  );
+}
+
+
+// ============================================================
+// LOAD SAVED COMPARE CODE
+// ============================================================
+
+function loadSavedCompareCode() {
+  if (
+    !savedCode ||
+    !savedCode.id ||
+    savedCode.type !== "compare"
+  ) {
+    return;
+  }
+
+  console.log(
+    "Loading saved comparison:",
+    savedCode
+  );
+
+  showCompareMode();
+
+  const languageA =
+    savedCode.language || "python";
+
+  const languageB =
+    savedCode.language_b || "python";
+
+
+  // ----------------------------------------------------------
+  // Language A
+  // ----------------------------------------------------------
+
+  const languageASelect =
+    document.getElementById(
+      "compareLanguageA"
+    );
+
+  if (languageASelect) {
+    languageASelect.value = languageA;
+  }
+
+  changeEditorLanguage(
+    editorA,
+    languageA
+  );
+
+
+  // ----------------------------------------------------------
+  // Language B
+  // ----------------------------------------------------------
+
+  const languageBSelect =
+    document.getElementById(
+      "compareLanguageB"
+    );
+
+  if (languageBSelect) {
+    languageBSelect.value = languageB;
+  }
+
+  changeEditorLanguage(
+    editorB,
+    languageB
+  );
+
+
+  // ----------------------------------------------------------
+  // Load Code A
+  // ----------------------------------------------------------
+
+  if (editorA) {
+    editorA.setValue(
+      savedCode.code || ""
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // Load Code B
+  // ----------------------------------------------------------
+
+  if (editorB) {
+    editorB.setValue(
+      savedCode.code_b || ""
+    );
+  }
+
+
+  console.log(
+    "Saved Code A:",
+    savedCode.code
+  );
+
+  console.log(
+    "Saved Code B:",
+    savedCode.code_b
+  );
+
+
+  // ----------------------------------------------------------
+  // IMPORTANT:
+  // Automatically compare saved programs
+  // ----------------------------------------------------------
+
+  setTimeout(function () {
+
+    if (
+      compareBtn &&
+      editorA &&
+      editorB
+    ) {
+      console.log(
+        "Automatically running saved comparison..."
+      );
+
+      compareBtn.click();
+    }
+
+  }, 700);
+}
+
+
+// ============================================================
+// Monaco Initialization
+// ============================================================
+
+require(
+  ["vs/editor/editor.main"],
+  function () {
+
+    // ========================================================
+    // NORMAL EDITOR
+    // ========================================================
+
+    const editorElement =
+      document.getElementById("editor");
+
+    if (editorElement) {
+
+      editor = monaco.editor.create(
+        editorElement,
+        {
+          value: templates.python,
+
+          language: "python",
+
+          theme: "vs-dark",
+
+          automaticLayout: true,
+
+          fontSize: 16,
+
+          minimap: {
+            enabled: false,
+          },
+        }
+      );
+    }
+
+
+    // ========================================================
+    // COMPARE EDITOR A
+    // ========================================================
+
+    const editorAElement =
+      document.getElementById("editorA");
+
+    if (editorAElement) {
+
+      const languageAElement =
+        document.getElementById(
+          "compareLanguageA"
+        );
+
+      const languageA =
+        languageAElement
+          ? languageAElement.value
+          : "python";
+
+      editorA =
+        monaco.editor.create(
+          editorAElement,
+          {
+            value:
+              templates[languageA] ||
+              templates.python,
+
+            language: languageA,
+
+            theme: "vs-dark",
+
+            automaticLayout: true,
+
+            fontSize: 16,
+
+            minimap: {
+              enabled: false,
+            },
+          }
+        );
+    }
+
+
+    // ========================================================
+    // COMPARE EDITOR B
+    // ========================================================
+
+    const editorBElement =
+      document.getElementById("editorB");
+
+    if (editorBElement) {
+
+      const languageBElement =
+        document.getElementById(
+          "compareLanguageB"
+        );
+
+      const languageB =
+        languageBElement
+          ? languageBElement.value
+          : "python";
+
+      editorB =
+        monaco.editor.create(
+          editorBElement,
+          {
+            value:
+              templates[languageB] ||
+              templates.python,
+
+            language: languageB,
+
+            theme: "vs-dark",
+
+            automaticLayout: true,
+
+            fontSize: 16,
+
+            minimap: {
+              enabled: false,
+            },
+          }
+        );
+    }
+
+
+    // ========================================================
+    // Show Saved File Name
+    // ========================================================
+
+    showSavedFileName();
+
+
+    // ========================================================
+    // LOAD SAVED CODE
+    //
+    // IMPORTANT:
+    // Editors are already created here.
+    // ========================================================
+
+    if (
+      savedCode &&
+      savedCode.id
+    ) {
+
+      if (
+        savedCode.type === "single"
+      ) {
+
+        loadSavedSingleCode();
+
+      } else if (
+        savedCode.type === "compare"
+      ) {
+
+        loadSavedCompareCode();
+
+      }
+
+    } else {
+
+      // Normal new compiler page
+
+      if (
+        window.location.pathname ===
+        "/compare/"
+      ) {
+
+        showCompareMode();
+
+      } else {
+
+        showSingleMode();
+
+      }
+
+    }
+
+
+    // ========================================================
+    // Layout Refresh
+    // ========================================================
+
+    setTimeout(function () {
+
+      if (editor) {
+        editor.layout();
+      }
+
+      if (editorA) {
+        editorA.layout();
+      }
+
+      if (editorB) {
+        editorB.layout();
+      }
+
+    }, 500);
+
+  }
+);
+
+
+// ============================================================
+// Normal Language Selection
+// ============================================================
+
+const languageSelect =
+  document.getElementById("language");
+
+if (languageSelect) {
+
+  languageSelect.addEventListener(
+    "change",
+    function () {
+
+      const language =
+        this.value;
+
+      updateEditor(
+        editor,
+        language
+      );
+
+    }
+  );
+}
+
+
+// ============================================================
+// Compare Language A
+// ============================================================
+
+const compareLanguageA =
+  document.getElementById(
+    "compareLanguageA"
+  );
+
+if (compareLanguageA) {
+
+  compareLanguageA.addEventListener(
+    "change",
+    function () {
+
+      const language =
+        this.value;
+
+      updateEditor(
+        editorA,
+        language
+      );
+
+    }
+  );
+}
+
+
+// ============================================================
+// Compare Language B
+// ============================================================
+
+const compareLanguageB =
+  document.getElementById(
+    "compareLanguageB"
+  );
+
+if (compareLanguageB) {
+
+  compareLanguageB.addEventListener(
+    "change",
+    function () {
+
+      const language =
+        this.value;
+
+      updateEditor(
+        editorB,
+        language
+      );
+
+    }
+  );
+}
+
+
+// ============================================================
+// RUN MODE BUTTON
+// ============================================================
+
+if (runModeBtn) {
+
+  runModeBtn.addEventListener(
+    "click",
+    function () {
+
+      showSingleMode();
+
+    }
+  );
+}
+
+
+// ============================================================
+// COMPARE MODE BUTTON
+// ============================================================
+
+if (compareModeBtn) {
+
+  compareModeBtn.addEventListener(
+    "click",
+    function () {
+
+      window.location.href =
+        "/compare/";
+
+    }
+  );
+}
+
+
+// ============================================================
+// RUN CODE
+// ============================================================
+
+if (runBtn) {
+
+  runBtn.addEventListener(
+    "click",
+    async function () {
+
+      if (!editor) {
+        return;
+      }
+
+      const languageElement =
+        document.getElementById(
+          "language"
+        );
+
+      const language =
+        languageElement
+          ? languageElement.value
+          : "python";
+
+      const code =
+        editor.getValue();
+
+      const inputElement =
+        document.getElementById(
+          "custom_input"
+        );
+
+      const userInput =
+        inputElement
+          ? inputElement.value
+          : "";
+
+
+      // ------------------------------------------------------
+      // UI
+      // ------------------------------------------------------
+
+      const outputElement =
+        document.getElementById(
+          "output"
+        );
+
+      const statusBadge =
+        document.getElementById(
+          "statusBadge"
+        );
+
+      const executionTime =
+        document.getElementById(
+          "executionTime"
+        );
+
+      const memoryUsage =
+        document.getElementById(
+          "memoryUsage"
+        );
+
+      const runText =
+        document.getElementById(
+          "runText"
+        );
+
+
+      if (runText) {
+        runText.textContent =
+          "Running...";
+      }
+
+      if (statusBadge) {
+
+        statusBadge.textContent =
+          "Running...";
+
+        statusBadge.className =
+          "status waiting";
+      }
+
+      if (outputElement) {
+
+        outputElement.textContent =
+          "Executing code...";
+      }
+
+
+      try {
+
+        const response =
+          await fetch(
+            "/run/",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                "X-CSRFToken":
+                  getCSRFToken(),
+              },
+
+              body:
+                JSON.stringify({
+                  language: language,
+
+                  code: code,
+
+                  input: userInput,
+                }),
+            }
+          );
+
+
+        const data =
+          await response.json();
+
+
+        // ----------------------------------------------------
+        // Output
+        // ----------------------------------------------------
+
+        if (outputElement) {
+
+          outputElement.textContent =
+            data.output ||
+            data.error ||
+            "No output";
+        }
+
+
+        // ----------------------------------------------------
+        // Status
+        // ----------------------------------------------------
+
+        if (statusBadge) {
+
+          if (data.error) {
+
+            statusBadge.textContent =
+              "Compilation Error";
+
+            statusBadge.className =
+              "status error";
+
+          } else {
+
+            statusBadge.textContent =
+              "Accepted";
+
+            statusBadge.className =
+              "status success";
+          }
+
+        }
+
+
+        // ----------------------------------------------------
+        // Execution Time
+        // ----------------------------------------------------
+
+        if (executionTime) {
+
+          executionTime.textContent =
+            "Execution Time: " +
+            (data.execution_time ?? "--") +
+            " ms";
+        }
+
+
+        // ----------------------------------------------------
+        // Memory
+        // ----------------------------------------------------
+
+        if (memoryUsage) {
+
+          memoryUsage.textContent =
+            "Memory Usage: " +
+            (data.memory_usage ?? "--");
+        }
+
+
+      } catch (error) {
+
+        console.error(
+          "Run error:",
+          error
+        );
+
+
+        if (outputElement) {
+
+          outputElement.textContent =
+            error.message;
+        }
+
+
+        if (statusBadge) {
+
+          statusBadge.textContent =
+            "Runtime Error";
+
+          statusBadge.className =
+            "status error";
+        }
+
+
+      } finally {
+
+        if (runText) {
+
+          runText.textContent =
+            "Run Code";
+        }
+
+      }
+
+    }
+  );
+}
+
+
+// ============================================================
+// DISPLAY COMPARISON RESULT
+// ============================================================
+
+function displayComparisonResult(data) {
+
+  if (!comparisonResult) {
+    return;
+  }
+
+
+  const a =
+    data.code_a;
+
+  const b =
+    data.code_b;
+
+  const comparison =
+    data.comparison;
+
+
+  comparisonResult.style.display =
+    "block";
+
+
+  // ========================================================
+  // Status
+  // ========================================================
+
+  const statusA =
+    document.getElementById(
+      "statusA"
+    );
+
+  const statusB =
+    document.getElementById(
+      "statusB"
+    );
+
+  if (statusA) {
+    statusA.textContent =
+      a.status;
+  }
+
+  if (statusB) {
+    statusB.textContent =
+      b.status;
+  }
+
+
+  // ========================================================
+  // Output
+  // ========================================================
+
+  const outputA =
+    document.getElementById(
+      "outputA"
+    );
+
+  const outputB =
+    document.getElementById(
+      "outputB"
+    );
+
+  if (outputA) {
+
+    outputA.textContent =
+      a.error ||
+      a.output ||
+      "No output";
+  }
+
+  if (outputB) {
+
+    outputB.textContent =
+      b.error ||
+      b.output ||
+      "No output";
+  }
+
+
+  // ========================================================
+  // Execution Time
+  // ========================================================
+
+  const timeA =
+    document.getElementById(
+      "timeA"
+    );
+
+  const timeB =
+    document.getElementById(
+      "timeB"
+    );
+
+  if (timeA) {
+
+    timeA.textContent =
+      (a.execution_time ?? "--") +
+      " ms";
+  }
+
+  if (timeB) {
+
+    timeB.textContent =
+      (b.execution_time ?? "--") +
+      " ms";
+  }
+
+
+  // ========================================================
+  // Memory
+  // ========================================================
+
+  const memoryA =
+    document.getElementById(
+      "memoryA"
+    );
+
+  const memoryB =
+    document.getElementById(
+      "memoryB"
+    );
+
+  if (memoryA) {
+    memoryA.textContent =
+      a.memory_usage ?? "--";
+  }
+
+  if (memoryB) {
+    memoryB.textContent =
+      b.memory_usage ?? "--";
+  }
+
+
+  // ========================================================
+  // Languages
+  // ========================================================
+
+  const languageAElement =
+    document.getElementById(
+      "compareLanguageA"
+    );
+
+  const languageBElement =
+    document.getElementById(
+      "compareLanguageB"
+    );
+
+  const languageA =
+    languageAElement
+      ? languageAElement.value
+      : "Code A";
+
+  const languageB =
+    languageBElement
+      ? languageBElement.value
+      : "Code B";
+
+
+  // ========================================================
+  // Update Table Headers
+  // ========================================================
+
+  const languageHeaderA =
+    document.getElementById(
+      "languageHeaderA"
+    );
+
+  const languageHeaderB =
+    document.getElementById(
+      "languageHeaderB"
+    );
+
+  if (languageHeaderA) {
+    languageHeaderA.textContent =
+      languageA;
+  }
+
+  if (languageHeaderB) {
+    languageHeaderB.textContent =
+      languageB;
+  }
+
+
+  // ========================================================
+  // Summary
+  // ========================================================
+
+  let summary = "";
+
+
+  if (comparison.same_output) {
+
+    summary +=
+      "✅ Both programs produced the same output.<br>";
+
+  } else {
+
+    summary +=
+      "❌ Programs produced different outputs.<br>";
+  }
+
+
+  // ========================================================
+  // Faster
+  // ========================================================
+
+  if (comparison.faster === "A") {
+
+    summary +=
+      `⚡ ${languageA} is faster.<br>`;
+
+  } else if (
+    comparison.faster === "B"
+  ) {
+
+    summary +=
+      `⚡ ${languageB} is faster.<br>`;
+
+  } else {
+
+    summary +=
+      "⚡ Both have similar execution time.<br>";
+  }
+
+
+  // ========================================================
+  // Memory Winner
+  // ========================================================
+
+  if (
+    comparison.memory_winner === "A"
+  ) {
+
+    summary +=
+      `💾 ${languageA} uses less memory.`;
+
+  } else if (
+    comparison.memory_winner === "B"
+  ) {
+
+    summary +=
+      `💾 ${languageB} uses less memory.`;
+
+  } else {
+
+    summary +=
+      "💾 Memory usage is similar or unavailable.";
+  }
+
+
+  const comparisonSummary =
+    document.getElementById(
+      "comparisonSummary"
+    );
+
+  if (comparisonSummary) {
+
+    comparisonSummary.innerHTML =
+      summary;
+  }
+
+
+  // ========================================================
+  // Scroll to Result
+  // ========================================================
+
+  comparisonResult.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+}
+
+
+// ============================================================
+// COMPARE CODE A vs CODE B
+// ============================================================
+
+if (compareBtn) {
+
+  compareBtn.addEventListener(
+    "click",
+    async function () {
+
+      if (
+        !editorA ||
+        !editorB
+      ) {
+
+        alert(
+          "Compare editors are not ready yet."
+        );
+
+        return;
+      }
+
+
+      // ------------------------------------------------------
+      // Languages
+      // ------------------------------------------------------
+
+      const languageA =
+        document.getElementById(
+          "compareLanguageA"
+        ).value;
+
+      const languageB =
+        document.getElementById(
+          "compareLanguageB"
+        ).value;
+
+
+      // ------------------------------------------------------
+      // Code
+      // ------------------------------------------------------
+
+      const codeA =
+        editorA.getValue();
+
+      const codeB =
+        editorB.getValue();
+
+
+      // ------------------------------------------------------
+      // Input
+      // ------------------------------------------------------
+
+      const inputElement =
+        document.getElementById(
+          "custom_input"
+        );
+
+      const userInput =
+        inputElement
+          ? inputElement.value
+          : "";
+
+
+      // ------------------------------------------------------
+      // Validation
+      // ------------------------------------------------------
+
+      if (!codeA.trim()) {
+
+        alert(
+          "Please enter Code A."
+        );
+
+        return;
+      }
+
+      if (!codeB.trim()) {
+
+        alert(
+          "Please enter Code B."
+        );
+
+        return;
+      }
+
+
+      // ------------------------------------------------------
+      // Loading
+      // ------------------------------------------------------
+
+      compareBtn.disabled =
+        true;
+
+      compareBtn.innerHTML =
+        "⏳ Comparing...";
+
+
+      try {
+
+        const response =
+          await fetch(
+            "/compare-code/",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                "X-CSRFToken":
+                  getCSRFToken(),
+              },
+
+              body:
+                JSON.stringify({
+                  language_a:
+                    languageA,
+
+                  language_b:
+                    languageB,
+
+                  code_a:
+                    codeA,
+
+                  code_b:
+                    codeB,
+
+                  user_input:
+                    userInput,
+                }),
+            }
+          );
+
+
+        const responseText =
+          await response.text();
+
+
+        console.log(
+          "HTTP Status:",
+          response.status
+        );
+
+        console.log(
+          "Response:",
+          responseText
+        );
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            `Server error (${response.status}): ${responseText.substring(
+              0,
+              300
+            )}`
+          );
+        }
+
+
+        let data;
+
+        try {
+
+          data =
+            JSON.parse(
+              responseText
+            );
+
+        } catch (error) {
+
+          console.error(
+            "Response is not JSON:",
+            responseText
+          );
+
+          throw new Error(
+            "Django returned HTML instead of JSON."
+          );
+        }
+
+
+        // ----------------------------------------------------
+        // Display Result
+        // ----------------------------------------------------
+
+        displayComparisonResult(
+          data
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          "Compare Error:",
+          error
+        );
+
+        alert(
+          error.message
+        );
+
+
+      } finally {
+
+        compareBtn.disabled =
+          false;
+
+        compareBtn.innerHTML =
+          "⚖ Compare Codes";
+
+      }
+
+    }
+  );
+}
+
+
+// ============================================================
+// UPLOAD
+// ============================================================
+
+const uploadBtn =
+  document.getElementById(
+    "uploadBtn"
+  );
+
+const uploadFile =
+  document.getElementById(
+    "uploadFile"
+  );
+
+const fileName =
+  document.getElementById(
+    "fileName"
+  );
+
+if (
+  uploadBtn &&
+  uploadFile
+) {
+
+  uploadBtn.addEventListener(
+    "click",
+    function () {
+
+      uploadFile.click();
+
+    }
+  );
+
+
+  uploadFile.addEventListener(
+    "change",
+    function () {
+
+      if (!this.files.length) {
+        return;
+      }
+
+
+      const file =
+        this.files[0];
+
+
+      if (fileName) {
+
+        fileName.textContent =
+          file.name;
+      }
+
+
+      const reader =
+        new FileReader();
+
+
+      reader.onload =
+        function (event) {
+
+          if (editor) {
+
+            editor.setValue(
+              event.target.result
+            );
+
+          }
+
+        };
+
+
+      reader.readAsText(file);
+
+    }
+  );
+}
+
+
+// ============================================================
+// DOWNLOAD
+// ============================================================
+
+const downloadBtn =
+  document.getElementById(
+    "downloadBtn"
+  );
+
+if (downloadBtn) {
+
+  downloadBtn.addEventListener(
+    "click",
+    function () {
+
+      if (!editor) {
+        return;
+      }
+
+
+      const language =
+        document.getElementById(
+          "language"
+        ).value;
+
+
+      const code =
+        editor.getValue();
+
+
+      let filename =
+        "code.txt";
+
+
+      switch (language) {
+
+        case "python":
+          filename = "code.py";
+          break;
+
+        case "java":
+          filename = "Main.java";
+          break;
+
+        case "javascript":
+          filename = "script.js";
+          break;
+
+        case "cpp":
+          filename = "code.cpp";
+          break;
+
+        case "c":
+          filename = "code.c";
+          break;
+
+      }
+
+
+      const blob =
+        new Blob(
+          [code],
+          {
+            type: "text/plain",
+          }
+        );
+
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+
+      const a =
+        document.createElement(
+          "a"
+        );
+
+
+      a.href =
+        url;
+
+      a.download =
+        filename;
+
+
+      document.body.appendChild(
+        a
+      );
+
+
+      a.click();
+
+
+      document.body.removeChild(
+        a
+      );
+
+
+      URL.revokeObjectURL(
+        url
+      );
+
+    }
+  );
+}
+
+
+// ============================================================
+// COPY OUTPUT
+// ============================================================
+
+const copyBtn =
+  document.getElementById(
+    "copyBtn"
+  );
+
+if (copyBtn) {
+
+  copyBtn.addEventListener(
+    "click",
+    async function () {
+
+      const output =
+        document.getElementById(
+          "output"
+        );
+
+
+      if (!output) {
+        return;
+      }
+
+
+      try {
+
+        await navigator.clipboard.writeText(
+          output.textContent
+        );
+
+
+        copyBtn.textContent =
+          "Copied!";
+
+
+        setTimeout(
+          function () {
+
+            copyBtn.innerHTML =
+              '<i class="fa-regular fa-copy"></i> Copy';
+
+          },
+          1500
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          "Copy failed:",
+          error
+        );
+
+      }
+
+    }
+  );
+}
+
+
+// ============================================================
+// CLEAR OUTPUT
+// ============================================================
+
+const clearBtn =
+  document.getElementById(
+    "clearBtn"
+  );
+
+if (clearBtn) {
+
+  clearBtn.addEventListener(
+    "click",
+    function () {
+
+      const output =
+        document.getElementById(
+          "output"
+        );
+
+      const statusBadge =
+        document.getElementById(
+          "statusBadge"
+        );
+
+      const executionTime =
+        document.getElementById(
+          "executionTime"
+        );
+
+      const memoryUsage =
+        document.getElementById(
+          "memoryUsage"
+        );
+
+
+      if (output) {
+
+        output.textContent =
+          "Output will appear here...";
+      }
+
+
+      if (statusBadge) {
+
+        statusBadge.textContent =
+          "Waiting...";
+
+        statusBadge.className =
+          "status waiting";
+      }
+
+
+      if (executionTime) {
+
+        executionTime.textContent =
+          "Execution Time: --";
+      }
+
+
+      if (memoryUsage) {
+
+        memoryUsage.textContent =
+          "Memory Usage: --";
+      }
+
+    }
+  );
+}
+
+
+// ============================================================
+// CTRL + ENTER
+// ============================================================
+
+document.addEventListener(
+  "keydown",
+  function (event) {
+
+    if (
+      (event.ctrlKey ||
+        event.metaKey) &&
+      event.key === "Enter"
+    ) {
+
+      event.preventDefault();
+
+
+      if (
+        runBtn &&
+        runBtn.style.display !==
+          "none"
+      ) {
+
+        runBtn.click();
+
+      } else if (
+        compareBtn &&
+        compareBtn.style.display !==
+          "none"
+      ) {
+
+        compareBtn.click();
+
+      }
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// F9
+// ============================================================
+
+document.addEventListener(
+  "keydown",
+  function (event) {
+
+    if (event.key === "F9") {
+
+      event.preventDefault();
+
+
+      if (
+        runBtn &&
+        runBtn.style.display !==
+          "none"
+      ) {
+
+        runBtn.click();
+
+      } else if (
+        compareBtn &&
+        compareBtn.style.display !==
+          "none"
+      ) {
+
+        compareBtn.click();
+
+      }
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// SAVE / UPDATE CODE
+// ============================================================
+
+if (saveCodeBtn) {
+
+  saveCodeBtn.addEventListener(
+    "click",
+    async function () {
+
+
+      // ======================================================
+      // SINGLE CODE
+      // ======================================================
+
+      if (
+        editor &&
+        !editorA &&
+        !editorB
+      ) {
+
+        const language =
+          document.getElementById(
+            "language"
+          ).value;
+
+
+        const code =
+          editor.getValue();
+
+
+        if (!code.trim()) {
+
+          alert(
+            "Please write some code first."
+          );
+
+          return;
+        }
+
+
+        // ----------------------------------------------------
+        // UPDATE EXISTING
+        // ----------------------------------------------------
+
+        if (
+          savedCode &&
+          savedCode.id
+        ) {
+
+          await saveExistingCode({
+
+            code_id:
+              savedCode.id,
+
+            code_type:
+              "single",
+
+            language:
+              language,
+
+            code:
+              code,
+
+            language_b:
+              "",
+
+            code_b:
+              "",
+
+          });
+
+          return;
+        }
+
+
+        // ----------------------------------------------------
+        // CREATE NEW
+        // ----------------------------------------------------
+
+        const title =
+          prompt(
+            "Enter a name for your code:"
+          );
+
+
+        if (
+          !title ||
+          !title.trim()
+        ) {
+
+          return;
+        }
+
+
+        await createNewCode({
+
+          title:
+            title.trim(),
+
+          code_type:
+            "single",
+
+          language:
+            language,
+
+          code:
+            code,
+
+          language_b:
+            "",
+
+          code_b:
+            "",
+
+        });
+
+
+        return;
+      }
+
+
+      // ======================================================
+      // COMPARE CODE
+      // ======================================================
+
+      if (
+        editorA &&
+        editorB
+      ) {
+
+        const languageA =
+          document.getElementById(
+            "compareLanguageA"
+          ).value;
+
+
+        const languageB =
+          document.getElementById(
+            "compareLanguageB"
+          ).value;
+
+
+        const codeA =
+          editorA.getValue();
+
+
+        const codeB =
+          editorB.getValue();
+
+
+        if (!codeA.trim()) {
+
+          alert(
+            "Please enter Code A."
+          );
+
+          return;
+        }
+
+
+        if (!codeB.trim()) {
+
+          alert(
+            "Please enter Code B."
+          );
+
+          return;
+        }
+
+
+        // ----------------------------------------------------
+        // UPDATE EXISTING COMPARISON
+        // ----------------------------------------------------
+
+        if (
+          savedCode &&
+          savedCode.id
+        ) {
+
+          await saveExistingCode({
+
+            code_id:
+              savedCode.id,
+
+            code_type:
+              "compare",
+
+            language:
+              languageA,
+
+            code:
+              codeA,
+
+            language_b:
+              languageB,
+
+            code_b:
+              codeB,
+
+          });
+
+          return;
+        }
+
+
+        // ----------------------------------------------------
+        // CREATE NEW COMPARISON
+        // ----------------------------------------------------
+
+        const title =
+          prompt(
+            "Enter a name for your comparison:"
+          );
+
+
+        if (
+          !title ||
+          !title.trim()
+        ) {
+
+          return;
+        }
+
+
+        await createNewCode({
+
+          title:
+            title.trim(),
+
+          code_type:
+            "compare",
+
+          language:
+            languageA,
+
+          code:
+            codeA,
+
+          language_b:
+            languageB,
+
+          code_b:
+            codeB,
+
+        });
+
+      }
+
+    }
+  );
+}
+
+
+// ============================================================
+// CREATE NEW CODE
+// ============================================================
+
+async function createNewCode(data) {
+
+  try {
+
+    const response =
+      await fetch(
+        "/save-code/",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            "X-CSRFToken":
+              getCSRFToken(),
+          },
+
+          body:
+            JSON.stringify(data),
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        result.error ||
+          "Failed to save code."
+      );
+    }
+
+
+    alert(
+      "✅ " +
+        result.message
+    );
+
+
+    // --------------------------------------------------------
+    // Remember saved file
+    // --------------------------------------------------------
+
+    savedCode = {
+
+      id:
+        result.id,
+
+      title:
+        data.title,
+
+      type:
+        data.code_type,
+
+      language:
+        data.language,
+
+      code:
+        data.code,
+
+      language_b:
+        data.language_b,
+
+      code_b:
+        data.code_b,
+
+    };
+
+
+    window.savedCode =
+      savedCode;
+
+
+    showSavedFileName();
+
+
+  } catch (error) {
+
+    console.error(
+      "Create Code Error:",
+      error
+    );
+
+    alert(
+      error.message
+    );
+
+  }
+
+}
+
+
+// ============================================================
+// UPDATE EXISTING CODE
+// ============================================================
+
+async function saveExistingCode(data) {
+
+  try {
+
+    const response =
+      await fetch(
+        "/save-code/",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            "X-CSRFToken":
+              getCSRFToken(),
+          },
+
+          body:
+            JSON.stringify(data),
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        result.error ||
+          "Failed to update code."
+      );
+    }
+
+
+    // --------------------------------------------------------
+    // Update local saved object
+    // --------------------------------------------------------
+
+    if (savedCode) {
+
+      savedCode.type =
+        data.code_type;
+
+      savedCode.language =
+        data.language;
+
+      savedCode.code =
+        data.code;
+
+      savedCode.language_b =
+        data.language_b;
+
+      savedCode.code_b =
+        data.code_b;
+
+    }
+
+
+    alert(
+      "✅ Your saved code was updated."
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Update Code Error:",
+      error
+    );
+
+    alert(
+      error.message
+    );
+
+  }
+
+}

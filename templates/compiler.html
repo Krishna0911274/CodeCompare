@@ -1,0 +1,451 @@
+{% extends "base.html" %} {% load static %} {% block title %} Online Compiler
+{%endblock %} {% block content %} {% csrf_token %}
+<div class="compiler-card">
+  <div class="container-fluid py-4">
+    <!-- ========================= -->
+    <!-- Page Title -->
+    <!-- ========================= -->
+
+    <h2 class="text-center mb-3">🚀 Online Compiler</h2>
+
+    <div
+      id="savedFileInfo"
+      class="alert alert-warning text-center"
+      style="display: none"
+    >
+      📝 <strong>Editing saved file:</strong>
+      <span id="savedFileName"></span>
+    </div>
+
+    <!-- ========================= -->
+    <!-- TWO COLUMN LAYOUT -->
+    <!-- ========================= -->
+
+    <div class="compiler-grid">
+      <!-- ========================================= -->
+      <!-- LEFT COLUMN: Source Code -->
+      <!-- ========================================= -->
+
+      <div class="compiler-left">
+        <div class="card shadow-lg p-4">
+          <!-- ========================= -->
+          <!-- Normal Language Selection -->
+          <!-- ========================= -->
+
+          <div class="mb-3" id="normalLanguageSection">
+            <label class="form-label fw-bold"> Select Language </label>
+
+            <select id="language" class="form-select">
+              <option value="python">Python</option>
+
+              <option value="java">Java</option>
+
+              <option value="javascript">JavaScript</option>
+
+              <option value="cpp">C++</option>
+
+              <option value="c">C</option>
+            </select>
+          </div>
+
+          <!-- ========================= -->
+          <!-- Mode Selection -->
+          <!-- ========================= -->
+
+          <div class="mb-3 d-flex justify-content-between align-items-center">
+            <label class="form-label fw-bold mb-0"> Source Code </label>
+
+            <div class="btn-group">
+              <button type="button" id="runModeBtn" class="btn btn-primary">
+                Single Code
+              </button>
+
+              <button
+                type="button"
+                id="compareModeBtn"
+                class="btn btn-outline-primary"
+              >
+                Compare Code
+              </button>
+            </div>
+          </div>
+
+          <!-- ========================= -->
+          <!-- NORMAL RUN EDITOR -->
+          <!-- ========================= -->
+
+          <div id="singleEditorSection">
+            <div id="editor"></div>
+
+            <input type="hidden" id="source_code" name="source_code" />
+          </div>
+
+          <!-- ========================= -->
+          <!-- COMPARE MODE -->
+          <!-- ========================= -->
+
+          <div id="compareEditorSection" style="display: none">
+            <!-- ========================= -->
+            <!-- Language Selection -->
+            <!-- ========================= -->
+
+            <div class="row mb-3">
+              <!-- Language A -->
+
+              <div class="col-md-6">
+                <label class="form-label fw-bold"> Language A </label>
+
+                <select id="compareLanguageA" class="form-select">
+                  <option value="python">Python</option>
+                  <option value="java">Java</option>
+                  <option value="javascript">JavaScript</option>
+                  <option value="cpp">C++</option>
+                  <option value="c">C</option>
+                </select>
+              </div>
+
+              <!-- Language B -->
+
+              <div class="col-md-6">
+                <label class="form-label fw-bold"> Language B </label>
+
+                <select id="compareLanguageB" class="form-select">
+                  <option value="python">Python</option>
+                  <option value="java">Java</option>
+                  <option value="javascript">JavaScript</option>
+                  <option value="cpp">C++</option>
+                  <option value="c">C</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- ========================= -->
+            <!-- Compare Editors -->
+            <!-- ========================= -->
+
+            <div class="row g-3">
+              <!-- ========================= -->
+              <!-- CODE A -->
+              <!-- ========================= -->
+
+              <div class="col-md-6">
+                <div class="d-flex justify-content-between mb-2">
+                  <label class="form-label fw-bold"> Code A </label>
+
+                  <span class="badge bg-secondary"> Program A </span>
+                </div>
+
+                <div id="editorA" class="compare-editor"></div>
+              </div>
+
+              <!-- ========================= -->
+              <!-- CODE B -->
+              <!-- ========================= -->
+
+              <div class="col-md-6">
+                <div class="d-flex justify-content-between mb-2">
+                  <label class="form-label fw-bold"> Code B </label>
+
+                  <span class="badge bg-secondary"> Program B </span>
+                </div>
+
+                <div id="editorB" class="compare-editor"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========================= -->
+          <!-- Custom Input -->
+          <!-- ========================= -->
+
+          <div class="mb-4 mt-4">
+            <label class="form-label fw-bold"> Custom Input </label>
+
+            <textarea
+              id="custom_input"
+              class="form-control"
+              rows="4"
+              placeholder="Enter input here..."
+            ></textarea>
+          </div>
+
+          <!-- ========================= -->
+          <!-- ACTION BUTTONS -->
+          <!-- ========================= -->
+
+          <div class="text-center">
+            <!-- Upload -->
+
+            <input
+              type="file"
+              id="uploadFile"
+              accept=".py,.java,.cpp,.c,.js"
+              hidden
+            />
+
+            <button id="uploadBtn" type="button" class="upload-btn">
+              <i class="fa-solid fa-upload"></i>
+
+              Upload
+            </button>
+
+            <!-- Download -->
+
+            <button id="downloadBtn" type="button" class="upload-btn">
+              <i class="fa-solid fa-download"></i>
+
+              Download
+            </button>
+
+            <button id="saveCodeBtn" type="button" class="btn btn-warning">
+              💾 Save Code
+            </button>
+
+            <!-- Run -->
+
+            <button id="runBtn" type="button" class="btn btn-success">
+              <span id="runIcon"> ▶ </span>
+
+              <span id="runText"> Run Code </span>
+            </button>
+
+            <!-- Compare -->
+
+            <button
+              id="compareBtn"
+              type="button"
+              class="btn btn-primary"
+              style="display: none"
+            >
+              <span> ⚖ </span>
+
+              Compare Codes
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================= -->
+      <!-- RIGHT COLUMN: Output -->
+      <!-- ========================================= -->
+
+      <div class="compiler-right">
+        <!-- ========================= -->
+        <!-- NORMAL OUTPUT -->
+        <!-- ========================= -->
+
+        <div class="card shadow-lg" id="normalOutputSection">
+          <!-- Output Header -->
+
+          <div
+            class="card-header d-flex justify-content-between align-items-center"
+          >
+            <span class="fw-bold"> Output </span>
+
+            <div class="output-toolbar">
+              <!-- Copy -->
+
+              <button id="copyBtn" type="button" class="toolbar-btn">
+                <i class="fa-regular fa-copy"></i>
+
+                Copy
+              </button>
+
+              <!-- Clear -->
+
+              <button id="clearBtn" type="button" class="toolbar-btn">
+                <i class="fa-solid fa-trash"></i>
+
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Output Body -->
+
+          <div class="card-body">
+            <pre id="output" class="mb-0">Output will appear here...</pre>
+
+            <!-- Execution Information -->
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <!-- Status -->
+
+              <span id="statusBadge" class="status waiting"> Waiting... </span>
+
+              <!-- Execution Time -->
+
+              <span id="executionTime"> Execution Time: -- </span>
+
+              <!-- Memory -->
+
+              <span id="memoryUsage"> Memory Usage: -- </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================= -->
+        <!-- COMPARISON RESULT -->
+        <!-- ========================= -->
+
+        <div
+          id="comparisonResult"
+          class="card shadow-lg mt-4"
+          style="display: none"
+        >
+          <!-- Comparison Header -->
+
+          <div class="card-header">
+            <h5 class="mb-0">⚖ Comparison Result</h5>
+          </div>
+
+          <!-- Comparison Body -->
+
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-bordered text-center align-middle">
+                <!-- Table Header -->
+
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+
+                    <th id="languageHeaderA">Code A</th>
+
+                    <th id="languageHeaderB">Code B</th>
+                  </tr>
+                </thead>
+
+                <!-- Table Body -->
+
+                <tbody>
+                  <!-- STATUS -->
+
+                  <tr>
+                    <td>
+                      <strong> Status </strong>
+                    </td>
+
+                    <td id="statusA">--</td>
+
+                    <td id="statusB">--</td>
+                  </tr>
+
+                  <!-- OUTPUT -->
+
+                  <tr>
+                    <td>
+                      <strong> Output </strong>
+                    </td>
+
+                    <td>
+                      <pre id="outputA" class="mb-0 text-start">--</pre>
+                    </td>
+
+                    <td>
+                      <pre id="outputB" class="mb-0 text-start">--</pre>
+                    </td>
+                  </tr>
+
+                  <!-- EXECUTION TIME -->
+
+                  <tr>
+                    <td>
+                      <strong> Execution Time </strong>
+                    </td>
+
+                    <td id="timeA">--</td>
+
+                    <td id="timeB">--</td>
+                  </tr>
+
+                  <!-- MEMORY -->
+
+                  <tr>
+                    <td>
+                      <strong> Memory Usage </strong>
+                    </td>
+
+                    <td id="memoryA">--</td>
+
+                    <td id="memoryB">--</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- ========================= -->
+            <!-- COMPARISON SUMMARY -->
+            <!-- ========================= -->
+
+            <div id="comparisonSummary" class="alert alert-info text-center mt-3">
+              Comparison results will appear here.
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- /.compiler-right -->
+    </div>
+    <!-- /.compiler-grid -->
+  </div>
+</div>
+
+{% endblock %}
+
+<!-- ========================= -->
+<!-- JavaScript -->
+<!-- ========================= -->
+
+{% block scripts %}
+
+{% if saved_code %}
+
+<!-- Saved Code A -->
+{{ saved_code.code|json_script:"saved-code" }}
+
+<!-- Saved Code B -->
+{{ saved_code.code_b|json_script:"saved-code-b" }}
+
+<!-- Saved File Name -->
+{{ saved_code.title|json_script:"saved-title" }}
+
+<script>
+    window.savedCode = {
+        id: {{ saved_code.id }},
+        type: "{{ saved_code.code_type }}",
+        language: "{{ saved_code.language }}",
+        language_b: "{{ saved_code.language_b }}"
+    };
+
+    window.savedCode.code =
+        JSON.parse(
+            document.getElementById("saved-code").textContent
+        );
+
+    window.savedCode.code_b =
+        JSON.parse(
+            document.getElementById("saved-code-b").textContent
+        );
+
+    window.savedCode.title =
+        JSON.parse(
+            document.getElementById("saved-title").textContent
+        );
+
+    console.log(
+        "Loaded saved file:",
+        window.savedCode
+    );
+</script>
+
+{% else %}
+
+<script>
+    window.savedCode = null;
+</script>
+
+{% endif %}
+
+<script src="{% static 'js/compiler.js' %}"></script>
+
+{% endblock %}

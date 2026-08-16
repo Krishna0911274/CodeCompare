@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+env/
+.venv/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Environment variables / secrets
+.env
+.env.*
+*.env
+
+# Docker
+temp/
+*.pid
+
+# Compiler temp files (your project-specific)
+temp/*.py
+temp/*.c
+temp/*.cpp
+temp/java/*.java
+temp/java/*.class
+temp/*_memory.txt
+temp/*_time.txt
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Node (if any frontend build tools)
+node_modules/
+
+# Compiled files
+*.class
+*.exe

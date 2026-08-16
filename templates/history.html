@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}
+Code History
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+  <!-- ========================= -->
+  <!-- HEADER -->
+  <!-- ========================= -->
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+
+    <div>
+      <h2>📜 Code History</h2>
+
+      <p class="text-muted">
+        Your saved programs and comparisons
+      </p>
+    </div>
+
+    <a href="{% url 'compiler' %}" class="btn btn-primary">
+      🚀 Start Coding
+    </a>
+
+  </div>
+
+
+  <!-- ========================= -->
+  <!-- SAVED CODES -->
+  <!-- ========================= -->
+
+  {% if codes %}
+
+  <div class="row">
+
+    {% for code in codes %}
+
+    <div class="col-md-6 col-lg-4 mb-4">
+
+      <div class="card shadow-sm h-100">
+
+        <div class="card-body">
+
+          <!-- ========================= -->
+          <!-- TITLE -->
+          <!-- ========================= -->
+
+          <h5 class="card-title">
+            {{ code.title }}
+          </h5>
+
+
+          <!-- ========================= -->
+          <!-- CODE TYPE + LANGUAGE -->
+          <!-- ========================= -->
+
+          {% if code.code_type == "compare" %}
+
+            <!-- Compare -->
+
+            <span class="badge bg-warning text-dark mb-3">
+              ⚖ Compare Code
+            </span>
+
+            <div class="mb-3">
+
+              <span class="badge bg-secondary">
+                {{ code.language }}
+              </span>
+
+              <strong class="mx-2">
+                VS
+              </strong>
+
+              <span class="badge bg-secondary">
+                {{ code.language_b }}
+              </span>
+
+            </div>
+
+          {% else %}
+
+            <!-- Single -->
+
+            <span class="badge bg-primary mb-3">
+              💻 Single Code
+            </span>
+
+            <div class="mb-3">
+
+              <span class="badge bg-secondary">
+                {{ code.language }}
+              </span>
+
+            </div>
+
+          {% endif %}
+
+
+          <!-- ========================= -->
+          <!-- DATE -->
+          <!-- ========================= -->
+
+          <p class="text-muted small">
+
+            Saved on:
+            {{ code.created_at|date:"d M Y, h:i A" }}
+
+          </p>
+
+
+          <!-- ========================= -->
+          <!-- BUTTONS -->
+          <!-- ========================= -->
+
+          <div class="d-flex gap-2">
+
+            <a
+              href="{% url 'open_code' code.id %}"
+              class="btn btn-success btn-sm"
+            >
+              ▶ Open
+            </a>
+
+
+            <form
+              method="POST"
+              action="{% url 'delete_code' code.id %}"
+            >
+
+              {% csrf_token %}
+
+              <button
+                type="submit"
+                class="btn btn-danger btn-sm"
+                onclick="return confirm('Delete this code?');"
+              >
+                🗑 Delete
+              </button>
+
+            </form>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    {% endfor %}
+
+  </div>
+
+
+  <!-- ========================= -->
+  <!-- NO SAVED CODE -->
+  <!-- ========================= -->
+
+  {% else %}
+
+  <div class="text-center py-5">
+
+    <h4>
+      📭 No saved code yet
+    </h4>
+
+    <p class="text-muted">
+      Your saved programs will appear here.
+    </p>
+
+    <a
+      href="{% url 'compiler' %}"
+      class="btn btn-primary"
+    >
+      Start Coding
+    </a>
+
+  </div>
+
+  {% endif %}
+
+</div>
+
+{% endblock %}

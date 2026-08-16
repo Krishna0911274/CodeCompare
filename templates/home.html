@@ -1,0 +1,33 @@
+{% extends "base.html" %} {% block title %} Home {% endblock %}
+ {% block content%}
+
+<div class="hero-section">
+  <div class="hero-badge">
+    <i class="fa-solid fa-bolt"></i>
+    Multi-Language Online Compiler
+  </div>
+
+  <h1 class="hero-title">
+    Write. Run. <span class="hero-highlight">Compare.</span>
+  </h1>
+
+  <p class="hero-subtitle">
+    Compile and execute Python, JavaScript, Java, C and C++ code instantly —
+    right in your browser. No setup required.
+  </p>
+
+  <a href="{% url 'compiler' %}" class="hero-btn">
+    <i class="fa-solid fa-play"></i>
+    Start Coding
+  </a>
+
+  <div class="hero-languages">
+    <span class="lang-pill"><i class="fa-brands fa-python"></i> Python</span>
+    <span class="lang-pill"><i class="fa-brands fa-js"></i> JavaScript</span>
+    <span class="lang-pill"><i class="fa-brands fa-java"></i> Java</span>
+    <span class="lang-pill">C++</span>
+    <span class="lang-pill">C</span>
+  </div>
+</div>
+
+{% endblock %}

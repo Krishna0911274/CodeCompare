@@ -54,6 +54,9 @@ let editor = null;
 let editorA = null;
 let editorB = null;
 
+// Current compiler mode
+let currentMode = "single";
+
 
 // ============================================================
 // Saved Code Information
@@ -62,11 +65,32 @@ let editorB = null;
 let savedCode = null;
 
 try {
-  if (window.savedCode) {
-    savedCode = window.savedCode;
+
+  const urlParams =
+    new URLSearchParams(
+      window.location.search
+    );
+
+  const hasCodeId =
+    urlParams.has("code_id");
+
+  if (
+    hasCodeId &&
+    window.savedCode
+  ) {
+
+    savedCode =
+      window.savedCode;
+
   }
+
 } catch (error) {
-  console.error("Could not read saved code:", error);
+
+  console.error(
+    "Could not read saved code:",
+    error
+  );
+
 }
 
 
@@ -227,6 +251,10 @@ function updateEditor(
 // ============================================================
 
 function showSingleMode() {
+  
+  console.log(">>> SHOW SINGLE MODE CALLED");
+  currentMode = "single";
+
   if (singleEditorSection) {
     singleEditorSection.style.display = "block";
   }
@@ -281,6 +309,10 @@ function showSingleMode() {
 // ============================================================
 
 function showCompareMode() {
+
+  console.log(">>> SHOW COMPARE MODE CALLED");
+  currentMode = "compare";
+
   if (singleEditorSection) {
     singleEditorSection.style.display = "none";
   }
@@ -338,7 +370,8 @@ function showCompareMode() {
 // LOAD SAVED SINGLE CODE
 // ============================================================
 
-function loadSavedSingleCode() {
+function 
+loadSavedSingleCode() {
   if (
     !savedCode ||
     !savedCode.id ||
@@ -644,25 +677,44 @@ require(
     // ========================================================
 
     if (
-      savedCode &&
-      savedCode.id
-    ) {
+  savedCode &&
+  savedCode.id
+) {
 
-      if (
-        savedCode.type === "single"
-      ) {
+  if (
+    savedCode.type === "single"
+  ) {
 
-        loadSavedSingleCode();
+    loadSavedSingleCode();
 
-      } else if (
-        savedCode.type === "compare"
-      ) {
+  } else if (
+    savedCode.type === "compare"
+  ) {
 
-        loadSavedCompareCode();
+    loadSavedCompareCode();
 
-      }
+  }
 
-    } else {
+} else {
+
+  // ========================================================
+  // NEW COMPILER PAGE
+  // ========================================================
+
+  if (
+    window.location.pathname ===
+    "/compare/"
+  ) {
+
+    showCompareMode();
+
+  } else {
+
+    showSingleMode();
+
+  }
+
+}
 
       // Normal new compiler page
 
@@ -1950,16 +2002,26 @@ if (saveCodeBtn) {
   saveCodeBtn.addEventListener(
     "click",
     async function () {
+           console.log("SAVE DEBUG:", {
+        currentMode: currentMode,
+        singleDisplay: singleEditorSection
+          ? singleEditorSection.style.display
+          : "missing",
+        compareDisplay: compareEditorSection
+          ? compareEditorSection.style.display
+          : "missing",
+        editorExists: !!editor,
+        editorAExists: !!editorA,
+        editorBExists: !!editorB
+      });
 
 
       // ======================================================
       // SINGLE CODE
       // ======================================================
 
-      if (
-        editor &&
-        singleEditorSection &&
-        singleEditorSection.style.display !== "none"
+      if ( currentMode === "single" && editor && singleEditorSection && singleEditorSection.style.display !== 
+        "none"
       ) {
 
         const language =
@@ -2068,10 +2130,9 @@ if (saveCodeBtn) {
       // ======================================================
 
       if (
+        currentMode === "compare" &&
         editorA &&
-        editorB &&
-        compareEditorSection &&
-        compareEditorSection.style.display !== "none"
+        editorB
       ) {
 
         const languageA =

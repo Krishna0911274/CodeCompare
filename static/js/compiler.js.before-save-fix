@@ -54,6 +54,9 @@ let editor = null;
 let editorA = null;
 let editorB = null;
 
+// Current compiler mode
+let currentMode = "single";
+
 
 // ============================================================
 // Saved Code Information
@@ -227,6 +230,10 @@ function updateEditor(
 // ============================================================
 
 function showSingleMode() {
+  
+  console.log(">>> SHOW SINGLE MODE CALLED");
+  currentMode = "single";
+
   if (singleEditorSection) {
     singleEditorSection.style.display = "block";
   }
@@ -281,6 +288,10 @@ function showSingleMode() {
 // ============================================================
 
 function showCompareMode() {
+
+  console.log(">>> SHOW COMPARE MODE CALLED");
+  currentMode = "compare";
+
   if (singleEditorSection) {
     singleEditorSection.style.display = "none";
   }
@@ -1950,6 +1961,9 @@ if (saveCodeBtn) {
   saveCodeBtn.addEventListener(
     "click",
     async function () {
+     console.log("SAVE CLICKED");
+     console.log("currentMode:", currentMode);
+     console.log("pathname:", window.location.pathname);
 
 
       // ======================================================
@@ -1957,9 +1971,8 @@ if (saveCodeBtn) {
       // ======================================================
 
       if (
-        editor &&
-        singleEditorSection &&
-        singleEditorSection.style.display !== "none"
+        currentMode === "single" &&
+        editor
       ) {
 
         const language =
@@ -2068,10 +2081,9 @@ if (saveCodeBtn) {
       // ======================================================
 
       if (
+        currentMode === "compare" &&
         editorA &&
-        editorB &&
-        compareEditorSection &&
-        compareEditorSection.style.display !== "none"
+        editorB
       ) {
 
         const languageA =

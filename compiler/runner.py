@@ -4,7 +4,8 @@ import os
 import shutil
 import time
 
-TEMP_DIR = "temp"
+TEMP_DIR = "/app/temp"
+DOCKER_TEMP_DIR = "/home/ubuntu/CodeCompare/temp"
 
 os.makedirs(TEMP_DIR, exist_ok=True)
 
@@ -81,7 +82,7 @@ def run_python(code, user_input=""):
             *security_options,
 
             "-v",
-            f"{os.path.abspath(TEMP_DIR)}:/code",
+            f"{DOCKER_TEMP_DIR}:/code",
 
             "codecompare-python",
 
@@ -197,7 +198,7 @@ def run_java(code, user_input=""):
 
         compile_command.extend([
             "-v",
-            f"{os.path.abspath(java_dir)}:/code",
+            f"{DOCKER_TEMP_DIR}/java:/code",
             "codecompare-java",
             "javac",
             "/code/Main.java",
@@ -241,7 +242,7 @@ def run_java(code, user_input=""):
             *security_options,
 
             "-v",
-            f"{os.path.abspath(java_dir)}:/code",
+            f"{DOCKER_TEMP_DIR}/java:/code",
 
             "codecompare-java",
 
@@ -356,7 +357,7 @@ def run_c(code, user_input=""):
 
         compile_command.extend([
             "-v",
-            f"{os.path.abspath(TEMP_DIR)}:/code",
+            f"{DOCKER_TEMP_DIR}:/code",
             "codecompare-c",
             "gcc",
             f"/code/{filename}.c",
@@ -402,7 +403,7 @@ def run_c(code, user_input=""):
             *security_options,
 
             "-v",
-            f"{os.path.abspath(TEMP_DIR)}:/code",
+            f"{DOCKER_TEMP_DIR}:/code",
 
             "codecompare-c",
 
@@ -517,7 +518,7 @@ def run_cpp(code, user_input=""):
 
         compile_command.extend([
             "-v",
-            f"{os.path.abspath(TEMP_DIR)}:/code",
+            f"{DOCKER_TEMP_DIR}:/code",
             "codecompare-cpp",
             "g++",
             f"/code/{filename}.cpp",
@@ -563,7 +564,7 @@ def run_cpp(code, user_input=""):
             *security_options,
 
             "-v",
-            f"{os.path.abspath(TEMP_DIR)}:/code",
+            f"{DOCKER_TEMP_DIR}:/code",
 
             "codecompare-cpp",
 
@@ -695,7 +696,7 @@ def run_javascript(code, user_input=""):
             *security_options,
 
             "-v",
-            f"{os.path.abspath(TEMP_DIR)}:/code",
+            f"{DOCKER_TEMP_DIR}:/code",
 
             "codecompare-javascript",
 
